@@ -5,10 +5,6 @@ import Toolbox
 
 /// A controller that handles all the ForceUpdate feature logic.
 public actor ForceUpdateController {
-    // MARK: Constants
-
-    private func iTunesLookupURL(bundleId: String) -> URL? { URL(string: "https://itunes.apple.com/lookup?bundleId=\(bundleId)&country=at") }
-
     // MARK: Init
 
     private init() {}
@@ -66,15 +62,24 @@ public actor ForceUpdateController {
     /// Configures the URL for fetching the public version JSON file hosted by you
     public var publicVersionURL: URL!
 
+    /// Configures the URL for fetching the App Store information of your already published app.
+    ///
+    /// Defaults to `https://itunes.apple.com/lookup?bundleId=\(Bundle.main.bundleIdentifier)&country=at`
+    public var appStoreLookupURL: URL!
+
     /// Call this before using the `ForceUpdateController` to configure it.
     public func configure(
         publicVersionURL: URL,
+        appStoreLookupURL: URL = URL(
+            string: "https://itunes.apple.com/lookup?bundleId=\(Bundle.main.bundleIdentifier!)&country=at"
+        )!,
         appStoreLookupDecoder: JSONDecoder? = nil,
         publicVersionLookupDecoder: JSONDecoder? = nil,
         appStoreLookupTimeout: TimeInterval = 120.0,
         publicVersionLookupTimeout: TimeInterval = 120.0
     ) {
         self.publicVersionURL = publicVersionURL
+        self.appStoreLookupURL = appStoreLookupURL
         self.appStoreLookupDecoder = appStoreLookupDecoder ?? Decoders.iso801
         self.publicVersionLookupDecoder = publicVersionLookupDecoder ?? Decoders.standardJSON
         self.appStoreLookupTimeout = appStoreLookupTimeout
@@ -128,19 +133,9 @@ public actor ForceUpdateController {
         }
     }
 
-    private func fetchAppStoreInfo(bundleId providedBundleId: String? = nil) async -> AppStoreLookUpResult? {
-        guard let bundleId = providedBundleId ?? Bundle.main.bundleIdentifier else {
-            assertionFailure("No bundleId found")
-            return nil
-        }
-
-        guard let url = iTunesLookupURL(bundleId: bundleId) else {
-            assertionFailure("iTunes Lookup URL invalid.")
-            return nil
-        }
-
+    private func fetchAppStoreInfo() async -> AppStoreLookUpResult? {
         let request = URLRequest(
-            url: url,
+            url: appStoreLookupURL,
             cachePolicy: .reloadIgnoringLocalAndRemoteCacheData,
             timeoutInterval: appStoreLookupTimeout
         )
