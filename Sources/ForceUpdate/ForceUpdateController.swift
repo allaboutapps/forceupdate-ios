@@ -150,7 +150,6 @@ public actor ForceUpdateController {
             let result = try appStoreLookupDecoder.decode(AppStoreLookUp.self, from: data)
             return result.results.first
         } catch {
-            assertionFailure("Decoding iTunes Lookup response failed")
             return nil
         }
     }
@@ -168,11 +167,6 @@ public actor ForceUpdateController {
             return nil
         }
 
-        do {
-            return try publicVersionLookupDecoder.decode(ProjectVersion.self, from: data)
-        } catch {
-            assertionFailure("Decoding project JSON failed")
-            return nil
-        }
+        return try? publicVersionLookupDecoder.decode(ProjectVersion.self, from: data)
     }
 }
