@@ -10,15 +10,9 @@ let package = Package(
     products: [
         .library(name: "ForceUpdate", targets: ["ForceUpdate"]),
     ],
-    dependencies: [
-        .package(url: "https://github.com/allaboutapps/Toolbox.git", from: "5.0.0"),
-    ],
     targets: [
         .target(
             name: "ForceUpdate",
-            dependencies: [
-                "Toolbox",
-            ],
             resources: [
                 .process("Resources"),
             ]

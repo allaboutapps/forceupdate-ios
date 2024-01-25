@@ -1,13 +1,13 @@
 import Foundation
 
-enum Decoders {
-    static let iso801: JSONDecoder = {
+public enum Decoders {
+    public static let iso801: JSONDecoder = {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return decoder
     }()
 
-    static let standardJSON: JSONDecoder = {
+    public static let standardJSON: JSONDecoder = {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom(Decoders.decodeDate)
         return decoder

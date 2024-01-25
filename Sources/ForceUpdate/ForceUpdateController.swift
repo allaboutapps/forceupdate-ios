@@ -1,23 +1,48 @@
 import Combine
 import Foundation
 import os
-import Toolbox
 
 /// A controller that handles all the ForceUpdate feature logic.
 public actor ForceUpdateController {
-    // MARK: Init
-
-    private init() {}
-
-    // MARK: Properties
-
-    private var checkForUpdateTask: Task<Void, Never>?
-    private nonisolated let onForceUpdateNeededSubject = PassthroughSubject<URL?, Never>()
-
     // MARK: Interface
 
-    /// Singleton
-    public static let shared = ForceUpdateController()
+    /// JSONDecoder used for decoding the App Store lookup result
+    public let appStoreLookupDecoder: JSONDecoder
+
+    /// JSONDecoder used for decoding the Public Version lookup result
+    public let publicVersionLookupDecoder: JSONDecoder
+
+    /// Configures the timeout used for fetching App Store informations
+    public let appStoreLookupTimeout: TimeInterval
+
+    /// Configures the timeout used for fetching version info from configured version URL
+    public let publicVersionLookupTimeout: TimeInterval
+
+    /// Configures the URL for fetching the public version JSON file hosted by you
+    public let publicVersionURL: URL
+
+    /// Configures the URL for fetching the App Store information of your already published app.
+    ///
+    /// Defaults to `https://itunes.apple.com/lookup?bundleId=\(Bundle.main.bundleIdentifier)&country=at`
+    public let appStoreLookupURL: URL
+
+    public init(
+        publicVersionURL: URL,
+        appStoreLookupURL: URL = URL(
+            string: "https://itunes.apple.com/lookup?bundleId=\(Bundle.main.bundleIdentifier!)&country=at"
+        )!,
+        appStoreLookupDecoder: JSONDecoder = Decoders.iso801,
+        publicVersionLookupDecoder: JSONDecoder = Decoders.standardJSON,
+        appStoreLookupTimeout: TimeInterval = 120.0,
+        publicVersionLookupTimeout: TimeInterval = 120.0
+    ) {
+        self.publicVersionURL = publicVersionURL
+        self.appStoreLookupURL = appStoreLookupURL
+        self.appStoreLookupDecoder = appStoreLookupDecoder
+        self.publicVersionLookupDecoder = publicVersionLookupDecoder
+        self.appStoreLookupTimeout = appStoreLookupTimeout
+        self.publicVersionLookupTimeout = publicVersionLookupTimeout
+    }
 
     /// AsyncSequence that emits a value if the force update screen should be displayed. Returns AppStore URL of the app.
     public private(set) nonisolated lazy var onForceUpdateNeededAsyncSequence = onForceUpdateNeededSubject.values
@@ -47,45 +72,6 @@ public actor ForceUpdateController {
     /// Returns the AppStore look up result, if available.
     public private(set) var appStoreLookUp: AppStoreLookUpResult?
 
-    /// JSONDecoder used for decoding the App Store lookup result
-    public var appStoreLookupDecoder: JSONDecoder = Decoders.iso801
-
-    /// JSONDecoder used for decoding the Public Version lookup result
-    public var publicVersionLookupDecoder: JSONDecoder = Decoders.standardJSON
-
-    /// Configures the timeout used for fetching App Store informations
-    public var appStoreLookupTimeout: TimeInterval = 120.0
-
-    /// Configures the timeout used for fetching version info from configured version URL
-    public var publicVersionLookupTimeout: TimeInterval = 120.0
-
-    /// Configures the URL for fetching the public version JSON file hosted by you
-    public var publicVersionURL: URL!
-
-    /// Configures the URL for fetching the App Store information of your already published app.
-    ///
-    /// Defaults to `https://itunes.apple.com/lookup?bundleId=\(Bundle.main.bundleIdentifier)&country=at`
-    public var appStoreLookupURL: URL!
-
-    /// Call this before using the `ForceUpdateController` to configure it.
-    public func configure(
-        publicVersionURL: URL,
-        appStoreLookupURL: URL = URL(
-            string: "https://itunes.apple.com/lookup?bundleId=\(Bundle.main.bundleIdentifier!)&country=at"
-        )!,
-        appStoreLookupDecoder: JSONDecoder? = nil,
-        publicVersionLookupDecoder: JSONDecoder? = nil,
-        appStoreLookupTimeout: TimeInterval = 120.0,
-        publicVersionLookupTimeout: TimeInterval = 120.0
-    ) {
-        self.publicVersionURL = publicVersionURL
-        self.appStoreLookupURL = appStoreLookupURL
-        self.appStoreLookupDecoder = appStoreLookupDecoder ?? Decoders.iso801
-        self.publicVersionLookupDecoder = publicVersionLookupDecoder ?? Decoders.standardJSON
-        self.appStoreLookupTimeout = appStoreLookupTimeout
-        self.publicVersionLookupTimeout = publicVersionLookupTimeout
-    }
-
     /// Checks for updates. Thread-safe.
     /// Fetches current version from AppStore and from project version JSON.
     public func checkForUpdate() async {
@@ -103,7 +89,10 @@ public actor ForceUpdateController {
         return await checkForUpdateTask.value
     }
 
-    // MARK: Helpers
+    // MARK: Private
+
+    private var checkForUpdateTask: Task<Void, Never>?
+    private nonisolated let onForceUpdateNeededSubject = PassthroughSubject<URL?, Never>()
 
     private func internalCheckForUpdate() async {
         os_log(.info, "checking for app update...")
